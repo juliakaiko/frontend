@@ -24,6 +24,8 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
     async (config) => {
         const accessToken = localStorage.getItem("accessToken");
+        console.log("Sending request with token:", accessToken ? "Present" : "Missing");
+        console.log("Request URL:", config.url);
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
@@ -65,8 +67,10 @@ axiosInstance.interceptors.response.use(
                     throw new Error('No refresh token available');
                 }
 
+                console.log("refreshToken:", localStorage.getItem("refreshToken"));
+
                 // Call refresh endpoint
-                const refreshResponse = await axiosInstance.post(`${API_BASE_URL}/auth/refresh`, {
+                const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, {
                     refreshToken: refreshToken
                 });
 

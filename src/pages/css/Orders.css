@@ -303,21 +303,27 @@
 }
 
 .error-message {
-    background-color: #ffebee;
-    color: #c62828;
+    background-color: #f8d7da;
+    color: #721c24;
     padding: 15px;
     border-radius: 5px;
     text-align: center;
     margin: 20px 0;
-    border: 1px solid #ffcdd2;
+    border: 1px solid #f5c6cb;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
 }
 
 .info-message {
-    background-color: #e3f2fd;
-    color: #1565c0;
+    background-color: #d1ecf1;
+    color: #0c5460;
     padding: 15px;
     border-radius: 5px;
     text-align: center;
     margin: 20px 0;
-    border: 1px solid #bbdefb;
+    border: 1px solid #bee5eb;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
 }

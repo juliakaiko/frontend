@@ -9,7 +9,7 @@ function Navbar() {
     return (
         <nav className="navbar">
             <div className="navbar-left">
-                <Link to="/" className="nav-link brand">🏠 Home</Link>
+                <Link to="/" className="nav-link brand">👜 Shop</Link>
 
                 {!auth && (
                     <>

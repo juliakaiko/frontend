@@ -1,24 +1,30 @@
 import React, { useEffect, useState } from "react";
-//import axios from "axios";
 import axiosInstance from "../utils/axiosInterceptor";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL } from "../utils/constants";
-import "./Orders.css";
+import OrderForm from "../components/OrderForm";
+import OrderDetailsModal from "../components/OrderDetailsModal";
+import "./css/Orders.css";
 
 function Orders() {
     const { auth } = useAuth();
     const [orders, setOrders] = useState([]);
+    const [items, setItems] = useState({}); // Store all items as { itemId: itemData }
     const [loading, setLoading] = useState(true);
+    const [itemsLoading, setItemsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [editingOrder, setEditingOrder] = useState(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
+    // Fetch orders and items when component mounts or auth changes
     useEffect(() => {
         if (!auth) {
             setLoading(false);
             return;
         }
         fetchOrders();
+        fetchAllItems();
     }, [auth]);
 
     const fetchOrders = () => {
@@ -31,13 +37,30 @@ function Orders() {
                 setLoading(false);
             })
             .catch((err) => {
-                console.error(err);
-                setError("Failed to fetch orders");
+                console.error("Error fetching orders:", err);
+                setError("Failed to fetch orders. Please try again later.");
                 setLoading(false);
             });
     };
 
-    // Функция для получения класса статуса
+    const fetchAllItems = async () => {
+        try {
+            setItemsLoading(true);
+            const response = await axiosInstance.get(`${API_BASE_URL}/api/items/all`);
+            const itemsMap = {};
+            response.data.forEach(item => {
+                itemsMap[item.id] = item;
+            });
+            setItems(itemsMap);
+        } catch (err) {
+            console.error("Error fetching items:", err);
+            setError("Failed to load products data. Please try again later.");
+        } finally {
+            setItemsLoading(false);
+        }
+    };
+
+    // Get CSS class for order status badge
     const getStatusClass = (status) => {
         if (!status) return 'status-default';
 
@@ -57,7 +80,7 @@ function Orders() {
         }
     };
 
-    // Функция для форматирования даты
+    // Format date string to readable format
     const formatDate = (dateString) => {
         try {
             return new Date(dateString).toLocaleDateString('en-US', {
@@ -70,9 +93,19 @@ function Orders() {
         }
     };
 
-    // Обработчики CRUD операций
-    const handleEdit = (order) => {
-        setEditingOrder(order);
+    // Calculate total amount for an order using items data
+    const calculateOrderTotal = (order) => {
+        return order.orderItems.reduce((total, orderItem) => {
+            const item = items[orderItem.itemId];
+            const price = item ? parseFloat(item.price) : 0;
+            const quantity = orderItem.quantity || 0;
+            return total + (price * quantity);
+        }, 0);
+    };
+
+    // CRUD operation handlers
+    const handleView = (order) => {
+        setSelectedOrder(order);
     };
 
     const handleDelete = async (orderId) => {
@@ -82,7 +115,8 @@ function Orders() {
 
         try {
             await axiosInstance.delete(`${API_BASE_URL}/api/orders/${orderId}`);
-            fetchOrders(); // Обновляем список
+            fetchOrders();
+            setSelectedOrder(null);
             alert("Order deleted successfully!");
         } catch (err) {
             console.error("Delete error:", err);
@@ -92,18 +126,15 @@ function Orders() {
 
     const handleCreate = async (orderData) => {
         try {
-            // Подготовка данных для создания заказа
             const newOrder = {
                 userId: auth.user.id,
                 status: "CREATED",
                 orderItems: orderData.orderItems || [],
-                // добавьте другие необходимые поля
             };
 
             await axiosInstance.post(`${API_BASE_URL}/api/orders/`, newOrder);
-
             setShowCreateForm(false);
-            fetchOrders(); // Обновляем список
+            fetchOrders();
             alert("Order created successfully!");
         } catch (err) {
             console.error("Create error:", err);
@@ -114,9 +145,9 @@ function Orders() {
     const handleUpdate = async (orderData) => {
         try {
             await axiosInstance.put(`${API_BASE_URL}/api/orders/${editingOrder.order.id}`, orderData);
-
             setEditingOrder(null);
-            fetchOrders(); // Обновляем список
+            setSelectedOrder(null);
+            fetchOrders();
             alert("Order updated successfully!");
         } catch (err) {
             console.error("Update error:", err);
@@ -124,20 +155,23 @@ function Orders() {
         }
     };
 
+    // Check if order can be edited based on status
     const canEdit = (status) => {
-        return ['CREATED', 'FAILED'].includes(status);
+        return !['PROCESSING', 'PAID'].includes(status);
     };
 
+    // Check if order can be deleted based on status
     const canDelete = (status) => {
         return ['CREATED', 'FAILED', 'CANCELLED'].includes(status);
     };
 
+    // Render loading state if user is not authenticated
     if (!auth) {
         return <p>Please login to view your orders.</p>;
     }
 
-    if (loading) return <p>Loading orders...</p>;
-    if (error) return <p>{error}</p>;
+    if (loading) return <div className="loading-spinner">Loading orders...</div>;
+    if (error) return <div className="error-message">{error}</div>;
 
     return (
         <div className="orders-container">
@@ -152,7 +186,7 @@ function Orders() {
             </div>
 
             {orders.length === 0 ? (
-                <p className="info-message">You haven't made any orders yet.</p>
+                <div className="info-message">You haven't made any orders yet.</div>
             ) : (
                 <table className="orders-table">
                     <thead>
@@ -161,6 +195,7 @@ function Orders() {
                         <th>Status</th>
                         <th>Creation Date</th>
                         <th>Items Count</th>
+                        <th>Total Amount</th>
                         <th>User</th>
                         <th>Actions</th>
                     </tr>
@@ -170,34 +205,19 @@ function Orders() {
                         <tr key={entry.order.id}>
                             <td>{entry.order.id}</td>
                             <td>
-                                    <span className={`status-badge ${getStatusClass(entry.order.status)}`}>
-                                        {entry.order.status}
-                                    </span>
+                                <span className={`status-badge ${getStatusClass(entry.order.status)}`}>
+                                    {entry.order.status}
+                                </span>
                             </td>
                             <td>{formatDate(entry.order.creationDate)}</td>
                             <td>{entry.order.orderItems.length}</td>
+                            <td>${calculateOrderTotal(entry.order).toFixed(2)}</td>
                             <td>{entry.user.name} {entry.user.surname}</td>
                             <td>
                                 <div className="action-buttons">
-                                    {canEdit(entry.order.status) && (
-                                        <button
-                                            className="btn-edit"
-                                            onClick={() => handleEdit(entry)}
-                                        >
-                                            Edit
-                                        </button>
-                                    )}
-                                    {canDelete(entry.order.status) && (
-                                        <button
-                                            className="btn-delete"
-                                            onClick={() => handleDelete(entry.order.id)}
-                                        >
-                                            Delete
-                                        </button>
-                                    )}
                                     <button
                                         className="btn-view"
-                                        onClick={() => handleEdit(entry)}
+                                        onClick={() => handleView(entry)}
                                     >
                                         View
                                     </button>
@@ -209,7 +229,25 @@ function Orders() {
                 </table>
             )}
 
-            {/* Форма редактирования */}
+            {/* Order Details Modal */}
+            {selectedOrder && (
+                <OrderDetailsModal
+                    order={selectedOrder}
+                    items={items}
+                    onClose={() => setSelectedOrder(null)}
+                    onUpdate={() => {
+                        setSelectedOrder(null);
+                        setEditingOrder(selectedOrder);
+                    }}
+                    onDelete={() => handleDelete(selectedOrder.order.id)}
+                    formatDate={formatDate}
+                    calculateTotal={calculateOrderTotal}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    itemsLoading={itemsLoading}
+                />
+            )}
+
             {editingOrder && (
                 <OrderForm
                     order={editingOrder}
@@ -219,7 +257,6 @@ function Orders() {
                 />
             )}
 
-            {/* Форма создания */}
             {showCreateForm && (
                 <OrderForm
                     onSave={handleCreate}
@@ -227,70 +264,6 @@ function Orders() {
                     mode="create"
                 />
             )}
-        </div>
-    );
-}
-
-// Компонент формы для создания/редактирования заказа
-function OrderForm({ order, onSave, onCancel, mode }) {
-    const [formData, setFormData] = useState({
-        status: order?.order?.status || "CREATED",
-        orderItems: order?.order?.orderItems || []
-    });
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onSave(formData);
-    };
-
-    return (
-        <div className="modal-overlay">
-            <div className="order-form-modal">
-                <h3>{mode === 'create' ? 'Create New Order' : 'Edit Order'}</h3>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label>Status:</label>
-                        <select
-                            value={formData.status}
-                            onChange={(e) => setFormData({...formData, status: e.target.value})}
-                        >
-                            <option value="CREATED">CREATED</option>
-                            <option value="PROCESSING">PROCESSING</option>
-                            <option value="PAID">PAID</option>
-                            <option value="CANCELLED">CANCELLED</option>
-                            <option value="FAILED">FAILED</option>
-                        </select>
-                    </div>
-
-                    {/* Здесь можно добавить поля для orderItems */}
-                    <div className="form-group">
-                        <label>Order Items (JSON):</label>
-                        <textarea
-                            value={JSON.stringify(formData.orderItems, null, 2)}
-                            onChange={(e) => {
-                                try {
-                                    const items = JSON.parse(e.target.value);
-                                    setFormData({...formData, orderItems: items});
-                                } catch (err) {
-                                    // Обработка ошибок парсинга JSON
-                                }
-                            }}
-                            rows="4"
-                            placeholder='[{"productId": 1, "quantity": 2}, ...]'
-                        />
-                    </div>
-
-                    <div className="form-actions">
-                        <button type="submit" className="btn-save">
-                            {mode === 'create' ? 'Create' : 'Update'}
-                        </button>
-                        <button type="button" className="btn-cancel" onClick={onCancel}>
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
         </div>
     );
 }

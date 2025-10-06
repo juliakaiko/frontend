@@ -1,17 +1,22 @@
-// Импортируем функции из React
 import React, { createContext, useState, useContext, useCallback } from "react";
 import { USER_INFO, API_BASE_URL } from "../utils/constants";
 import axios from "axios";
 
-// 1️⃣ Создаём сам контекст для авторизации
-// Это как "глобальное хранилище", чтобы не передавать токены через пропсы между компонентами
+/**
+ * Create the authentication context
+ * This acts as a "global store" to avoid passing tokens through props between components
+ */
 const AuthContext = createContext(null);
 
-// 2️⃣ Компонент-провайдер, который будет "оборачивать" всё приложение
-// и предоставлять доступ к состоянию авторизации (auth, login, logout)
+/**
+ * Provider component that will "wrap" the entire application
+ * and provide access to authentication state (auth, login, logout)
+ */
 export function AuthProvider({ children }) {
-    // 3️⃣ Состояние авторизации
-    // При старте проверяем localStorage: если там уже есть токен, значит пользователь авторизован
+    /**
+     * Authentication state
+     * On startup, check localStorage: if there's already a token, the user is authenticated
+     */
     const [auth, setAuth] = useState(() => {
         const accessToken = localStorage.getItem("accessToken");
         const refreshToken = localStorage.getItem("refreshToken");
@@ -23,7 +28,9 @@ export function AuthProvider({ children }) {
         } : null;
     });
 
-    // 8️⃣ Функция для обновления access token с помощью refresh token
+    /**
+     * Function to refresh access token using refresh token
+     */
     const refreshAccessToken = useCallback(async () => {
         try {
             const refreshToken = localStorage.getItem("refreshToken");
@@ -40,13 +47,13 @@ export function AuthProvider({ children }) {
 
             const { accessToken, refreshToken: newRefreshToken } = response.data;
 
-            // Сохраняем новые токены в localStorage
+            // Save new tokens to localStorage
             localStorage.setItem("accessToken", accessToken);
             if (newRefreshToken) {
                 localStorage.setItem("refreshToken", newRefreshToken);
             }
 
-            // Обновляем состояние
+            // Update state
             const user = localStorage.getItem(USER_INFO);
             const updatedAuth = {
                 token: accessToken,
@@ -61,13 +68,15 @@ export function AuthProvider({ children }) {
 
         } catch (error) {
             console.error("Token refresh failed:", error);
-            // Если обновление не удалось, разлогиниваем пользователя
+            // If refresh fails, log out the user
             logout();
             throw error;
         }
     }, []);
 
-    // 9️⃣ Функция проверки истекшего токена
+    /**
+     * Function to check if token is expired
+     */
     const isTokenExpired = useCallback((token) => {
         if (!token) return true;
 
@@ -76,7 +85,7 @@ export function AuthProvider({ children }) {
             const expirationTime = payload.exp * 1000; // Convert to milliseconds
             const currentTime = Date.now();
 
-            // Добавляем буфер в 1 минуту для предварительного обновления
+            // Add 1 minute buffer for preemptive refresh
             return expirationTime - currentTime < 60000;
         } catch (error) {
             console.error('Error decoding token:', error);
@@ -84,14 +93,18 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
-    // 🔟 Функция проверки необходимости обновления токена
+    /**
+     * Function to check if token needs refresh
+     */
     const shouldRefreshToken = useCallback(() => {
         const accessToken = localStorage.getItem("accessToken");
         return isTokenExpired(accessToken);
     }, [isTokenExpired]);
 
-    // 4️⃣ Функция логина
-    // Сохраняем токены в localStorage (чтобы пережили перезагрузку страницы) и обновляем состояние auth
+    /**
+     * Login function
+     * Save tokens to localStorage (to survive page reload) and update auth state
+     */
     const login = (tokens, userInfo) => {
         localStorage.setItem("accessToken", tokens.accessToken);
         localStorage.setItem("refreshToken", tokens.refreshToken);
@@ -103,8 +116,10 @@ export function AuthProvider({ children }) {
         });
     };
 
-    // 5️⃣ Функция логаута
-    // Удаляем токены и сбрасываем состояние auth → пользователь становится "гостем"
+    /**
+     * Logout function
+     * Remove tokens and reset auth state → user becomes "guest"
+     */
     const logout = () => {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
@@ -112,8 +127,10 @@ export function AuthProvider({ children }) {
         setAuth(null);
     };
 
-    // 6️⃣ Возвращаем провайдер, который передаёт детям (всё приложение внутри)
-    // текущее состояние и функции login/logout
+    /**
+     * Return provider that passes current state and login/logout functions
+     * to children (the entire application inside)
+     */
     return (
         <AuthContext.Provider value={{
             auth,
@@ -128,8 +145,10 @@ export function AuthProvider({ children }) {
     );
 }
 
-// 7️⃣ Кастомный хук для удобства использования контекста
-// Вместо useContext(AuthContext) можно вызывать просто useAuth()
+/**
+ * Custom hook for convenient context usage
+ * Instead of useContext(AuthContext), you can simply call useAuth()
+ */
 export function useAuth() {
     return useContext(AuthContext);
 }

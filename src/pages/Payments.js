@@ -1,33 +1,47 @@
 import React, { useEffect, useState } from "react";
-//import axios from "axios";
 import axiosInstance from "../utils/axiosInterceptor";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL } from "../utils/constants";
-import "./Payments.css";
+import "./css/Payments.css";
 
+/**
+ * Payments component that displays user's payment history
+ * Fetches payments data from API and renders in a table format
+ * @component
+ * @returns {JSX.Element} Rendered payments component
+ */
 function Payments() {
-    const { auth } = useAuth(); // ← Получаем объект авторизации из контекста
-    const [payments, setPayments] = useState([]); // ← Состояние для хранения списка платежей
-    const [loading, setLoading] = useState(true); // ← Состояние загрузки (изначально true)
-    const [error, setError] = useState(null); // ← Состояние для ошибок
+    /** @type {Object} Authentication context from AuthProvider */
+    const { auth } = useAuth();
 
-    // ВРЕМЕННО: для проверки что в auth.user
-    console.log("Auth object:", auth);
-    console.log("Auth user:", auth?.user);
-    console.log("User ID:", auth?.user?.id);
-    console.log("User email:", auth?.user?.email);
+    /** @type {Array} State for storing payments list */
+    const [payments, setPayments] = useState([]);
 
+    /** @type {boolean} State for loading status */
+    const [loading, setLoading] = useState(true);
+
+    /** @type {string|null} State for error messages */
+    const [error, setError] = useState(null);
+
+    /**
+     * useEffect hook to fetch payments when component mounts or auth changes
+     * @effect
+     */
     useEffect(() => {
         if (!auth) {
             setLoading(false);
             return;
         }
 
+        /**
+         * Fetches payments data from API for the current user
+         * @async
+         */
         const fetchPayments = async () => {
             try {
-                // Используем прямой запрос к вашему API
-                // Предполагаем, что у пользователя есть id в auth.user
-                const userId = auth.user.id || 1; // если id нет, используем 1 как fallback
+                // Use direct API call to fetch user payments
+                // Assumes user object contains id property
+                const userId = auth.user.id || 1; // Fallback to 1 if no id present
 
                 const response = await axiosInstance.get(
                     `${API_BASE_URL}/api/payments/user/${userId}`);
@@ -44,7 +58,11 @@ function Payments() {
         fetchPayments();
     }, [auth]);
 
-    // Функция для форматирования даты
+    /**
+     * Formats date string to readable localized format
+     * @param {string} dateString - ISO date string to format
+     * @returns {string} Formatted date string
+     */
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -55,7 +73,11 @@ function Payments() {
         });
     };
 
-    // Функция для получения класса статуса (ТОЛЬКО для PAID/FAILED)
+    /**
+     * Determines CSS class for payment status badge (ONLY for PAID/FAILED statuses)
+     * @param {string} status - Payment status string
+     * @returns {string} CSS class name for status styling
+     */
     const getStatusClass = (status) => {
         if (!status) return 'status-default';
 
@@ -69,7 +91,11 @@ function Payments() {
         }
     };
 
-    // Функция для форматирования суммы
+    /**
+     * Formats amount as USD currency with 2 decimal places
+     * @param {number} amount - Payment amount to format
+     * @returns {string} Formatted currency string
+     */
     const formatAmount = (amount) => {
         return new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 2,

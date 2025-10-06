@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-//import axios from "axios";
 import axiosInstance from "../utils/axiosInterceptor";
 import { useAuth } from "../contexts/AuthContext";
 import { TextField, Button, Box, Typography } from "@mui/material";
@@ -95,7 +94,7 @@ export default function Login() {
         }
     };
 
-    // 🎨 Render login form UI
+    // Render login form UI
     return (
         <Box
             sx={{

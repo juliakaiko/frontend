@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { register } from "../api/auth";
 import { TextField, Button, Box, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext"; // If using AuthProvider
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Register() {
     // Hook for navigation between routes

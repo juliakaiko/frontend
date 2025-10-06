@@ -1,10 +1,10 @@
 import { API_BASE_URL } from "../utils/constants";
 
 /**
- * Регистрирует нового пользователя.
- * @param {Object} userData - данные пользователя для регистрации
- * @returns {Object} - объект ответа от сервера
- * @throws {Object} - объект с полями fieldErrors и general в случае ошибки
+ * Registers a new user.
+ * @param {Object} userData - user data for registration
+ * @returns {Object} - the object of the response from the server
+ * @throws {Object} - an object with fieldErrors and general fields in case of an error
  */
 export async function register(userData) {
     const response = await fetch(`${API_BASE_URL}/register`, {
@@ -15,13 +15,12 @@ export async function register(userData) {
 
     let data;
     try {
-        data = await response.json(); // пытаемся распарсить JSON
+        data = await response.json();
     } catch {
-        data = { general: "Server error" }; // если сервер не вернул JSON
+        data = { general: "Server error" };
     }
 
     if (!response.ok) {
-        // выбрасываем объект с fieldErrors или общей ошибкой
         throw data;
     }
 
