@@ -11,7 +11,11 @@ export default function Welcome() {
     const [greeting, setGreeting] = useState("");
 
     useEffect(() => {
-        if (!auth) {
+        console.log("🔍 Welcome - auth:", auth);
+        console.log("🔍 Welcome - auth.user:", auth?.user);
+
+        if (!auth || !auth.user) {
+            console.log("🔍 No auth or user, redirecting to login");
             navigate("/login");
             return;
         }

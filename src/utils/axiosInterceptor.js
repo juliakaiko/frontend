@@ -18,14 +18,26 @@ const processQueue = (error, token = null) => {
 // Create axios instance
 const axiosInstance = axios.create({
     baseURL: API_BASE_URL,
+    timeout: 10000,
 });
+
+//!!!Without withCredentials: true, the X-Internal-Call and X-Source-Service headers were NOT transmitted between the services
+axiosInstance.defaults.withCredentials = true;
 
 // Request interceptor to add access token
 axiosInstance.interceptors.request.use(
     async (config) => {
         const accessToken = localStorage.getItem("accessToken");
-        console.log("Sending request with token:", accessToken ? "Present" : "Missing");
-        console.log("Request URL:", config.url);
+        console.log("=== REQUEST DEBUG ===");
+        console.log("URL:", config.url);
+        console.log("Method:", config.method);
+        console.log("Access Token:", accessToken ? "Present" : "Missing");
+        console.log("With Credentials:", config.withCredentials);
+        console.log("Headers:", config.headers);
+        console.log("🔍 AXIOS REQUEST - URL:", config.url);
+        console.log("🔍 AXIOS REQUEST - Params:", config.params);
+        console.log("🔍 AXIOS REQUEST - Full URL:", config.baseURL + config.url);
+        console.log("======================");
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
@@ -39,9 +51,21 @@ axiosInstance.interceptors.request.use(
 // Response interceptor to handle token refresh
 axiosInstance.interceptors.response.use(
     (response) => {
+        console.log("=== RESPONSE DEBUG ===");
+        console.log("URL:", response.config.url);
+        console.log("Status:", response.status);
+        console.log("Response Headers:", response.headers);
+        console.log("======================");
         return response;
     },
     async (error) => {
+        console.log("=== ERROR DEBUG ===");
+        console.log("URL:", error.config?.url);
+        console.log("Status:", error.response?.status);
+        console.log("Error Message:", error.message);
+        console.log("Response Headers:", error.response?.headers);
+        console.log("Request Headers:", error.config?.headers);
+        console.log("====================");
         const originalRequest = error.config;
 
         // If error is 401 and we haven't tried to refresh yet
