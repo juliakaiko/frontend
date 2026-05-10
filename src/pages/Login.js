@@ -30,7 +30,8 @@ export default function Login() {
             console.log("🔍 Sending login request...");
 
             const response = await axiosInstance.post(
-                `${API_BASE_URL}/auth/login`,
+                //`${API_BASE_URL}/auth/login`,
+                `/auth/login`,
                 { email, password },
                 { headers: { "Content-Type": "application/json" } }
             );
@@ -47,7 +48,8 @@ export default function Login() {
 
             // Retrieve user information by email
             const userResponse = await axiosInstance.get(
-                `${API_BASE_URL}/api/users/find-by-email`,
+                //`${API_BASE_URL}/api/users/find-by-email`,
+                `/api/users/find-by-email`,
                 {
                     params: { email }
                 }
